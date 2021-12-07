@@ -123,6 +123,8 @@ aperture.gui:
         drag_description: 使用当前值与先前值之间的线性交错，将已启用的相机属性进行平滑处理
         remapper: 重映射
         remapper_description: 基于给定的表达式或关键帧重新映射关键点的路径
+        dolly_zoom: 滑动变焦
+        dolly_zoom_description: 基于指定起始焦点，自动根据FOV调整相机位置
 
         enabled: 启用
 
@@ -157,12 +159,41 @@ aperture.gui:
 
             keyframes: 启用关键帧
 
+            focus: 焦点
+
         envelopes:
             start_x: 起始点
             start_d: 缓入点
             end_x: 结束点（如果启用了“相对值”，那么此处为持续时间的终点，否则从起点开始计算）
             end_d: 缓出点
             interp: 选择包络的插值
+
+    curves:
+        sky_r: 天空颜色 R
+        sky_g: 天空颜色 G
+        sky_b: 天空颜色 B
+
+        cloud_r: 云颜色 R
+        cloud_g: 云颜色 G
+        cloud_b: 云颜色 B
+
+        fog_r: 雾颜色 R
+        fog_g: 雾颜色 G
+        fog_b: 雾颜色 B
+        fog_start: 雾起始点
+        fog_end: 雾消失点
+        fog_density: 雾浓度 （水下）
+
+        celestial_angle: 日月角度 （经度）
+
+        shader:
+            sun_path_rotation: 日月偏角 （纬度）
+            center_depth_smooth: 相机焦点
+            rain_strength: 降雨程度
+            wetness: 潮湿度
+            frame_time_counter: 帧时间动画
+            world_time: 世界时间动画
+            is_eye_in_water: 水下模式
 
     profiles:
         title: 配置

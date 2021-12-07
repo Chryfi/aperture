@@ -3,6 +3,7 @@ package mchorse.aperture;
 import mchorse.aperture.camera.CameraControl;
 import mchorse.aperture.camera.CameraRenderer;
 import mchorse.aperture.camera.CameraRunner;
+import mchorse.aperture.camera.CurveManager;
 import mchorse.aperture.camera.FixtureRegistry;
 import mchorse.aperture.camera.FixtureRegistry.FixtureInfo;
 import mchorse.aperture.camera.ModifierRegistry;
@@ -17,6 +18,7 @@ import mchorse.aperture.camera.fixtures.NullFixture;
 import mchorse.aperture.camera.fixtures.PathFixture;
 import mchorse.aperture.camera.modifiers.AbstractModifier;
 import mchorse.aperture.camera.modifiers.AngleModifier;
+import mchorse.aperture.camera.modifiers.DollyZoomModifier;
 import mchorse.aperture.camera.modifiers.DragModifier;
 import mchorse.aperture.camera.modifiers.FollowModifier;
 import mchorse.aperture.camera.modifiers.LookModifier;
@@ -37,6 +39,7 @@ import mchorse.aperture.client.gui.panels.GuiManualFixturePanel;
 import mchorse.aperture.client.gui.panels.GuiNullFixturePanel;
 import mchorse.aperture.client.gui.panels.GuiPathFixturePanel;
 import mchorse.aperture.client.gui.panels.modifiers.GuiAngleModifierPanel;
+import mchorse.aperture.client.gui.panels.modifiers.GuiDollyZoomModifierPanel;
 import mchorse.aperture.client.gui.panels.modifiers.GuiDragModifierPanel;
 import mchorse.aperture.client.gui.panels.modifiers.GuiFollowModifierPanel;
 import mchorse.aperture.client.gui.panels.modifiers.GuiLookModifierPanel;
@@ -47,7 +50,10 @@ import mchorse.aperture.client.gui.panels.modifiers.GuiShakeModifierPanel;
 import mchorse.aperture.client.gui.panels.modifiers.GuiTranslateModifierPanel;
 import mchorse.aperture.commands.CommandCamera;
 import mchorse.aperture.commands.CommandLoadChunks;
+import mchorse.aperture.utils.OptifineHelper;
+import mchorse.aperture.utils.mclib.ValueShaderOption;
 import mchorse.mclib.McLib;
+import mchorse.mclib.config.ConfigBuilder;
 import mchorse.mclib.utils.Color;
 import mchorse.mclib.utils.OpHelper;
 import net.minecraft.client.Minecraft;
@@ -80,6 +86,7 @@ public class ClientProxy extends CommonProxy
     public static CameraRenderer renderer = new CameraRenderer();
     public static CameraControl control = new CameraControl();
     public static CameraRunner runner;
+    public static CurveManager curveManager = new CurveManager();
 
     public static KeyboardHandler keys;
 
@@ -216,6 +223,7 @@ public class ClientProxy extends CommonProxy
         GuiModifiersManager.PANELS.put(OrbitModifier.class, GuiOrbitModifierPanel.class);
         GuiModifiersManager.PANELS.put(DragModifier.class, GuiDragModifierPanel.class);
         GuiModifiersManager.PANELS.put(RemapperModifier.class, GuiRemapperModifierPanel.class);
+        GuiModifiersManager.PANELS.put(DollyZoomModifier.class, GuiDollyZoomModifierPanel.class);
 
         ModifierRegistry.registerClient(ShakeModifier.class, "aperture.gui.modifiers.shake", new Color(0.085F, 0.62F, 0.395F));
         ModifierRegistry.registerClient(MathModifier.class, "aperture.gui.modifiers.math", new Color(0.408F, 0.128F, 0.681F));
@@ -226,6 +234,7 @@ public class ClientProxy extends CommonProxy
         ModifierRegistry.registerClient(OrbitModifier.class, "aperture.gui.modifiers.orbit", new Color(0.874F, 0.184F, 0.625F));
         ModifierRegistry.registerClient(DragModifier.class, "aperture.gui.modifiers.drag", new Color(0.298F, 0.690F, 0.972F));
         ModifierRegistry.registerClient(RemapperModifier.class, "aperture.gui.modifiers.remapper", new Color().set(0x111111));
+        ModifierRegistry.registerClient(DollyZoomModifier.class, "aperture.gui.modifiers.dolly_zoom", new Color().set(0x222222));
 
         super.load(event);
 
@@ -261,5 +270,28 @@ public class ClientProxy extends CommonProxy
         String comment = I18n.format(key);
 
         return comment.equals(key) ? defaultComment : comment;
+    }
+
+    /**
+     * Register client only configuration
+     */
+    @Override
+    public void registerClientConfig(ConfigBuilder builder)
+    {
+        /* Minema integration */
+        Aperture.minemaDefaultProfileName = builder.category("minema").getBoolean("default_profile_name", false);
+
+        builder.getCategory().markClientSide();
+
+        /* Optifine */
+        Aperture.optifineShaderOptionCurve = builder.category("optifine").getBoolean("shader_option_curve", true);
+        Aperture.optifineShaderOptionCurve.invisible();
+        builder.register(new ValueShaderOption("option").clientSide());
+        builder.getCategory().markClientSide();
+        
+        if (!OptifineHelper.shaderpackSupported)
+        {
+            builder.getCategory().invisible();
+        }
     }
 }

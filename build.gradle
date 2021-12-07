@@ -49,6 +49,14 @@ dependencies
     compile files("run/libs/Minema-${minema}-${project.minecraft.version}-dev.jar")
 }
 
+jar {
+   manifest {
+       attributes 'FMLCorePlugin': coremodPath, 'FMLCorePluginContainsFMLMod': 'true'
+   }
+
+   exclude 'net/**'
+}
+
 eclipse
 {
     classpath
@@ -81,6 +89,8 @@ eclipse
 task deobfJar(type: Jar) {  
     from sourceSets.main.output 
     classifier = 'dev'  
+
+    exclude 'net/**'
 }   
 
 artifacts 

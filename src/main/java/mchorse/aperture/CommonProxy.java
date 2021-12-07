@@ -10,6 +10,7 @@ import mchorse.aperture.camera.fixtures.ManualFixture;
 import mchorse.aperture.camera.fixtures.NullFixture;
 import mchorse.aperture.camera.fixtures.PathFixture;
 import mchorse.aperture.camera.modifiers.AngleModifier;
+import mchorse.aperture.camera.modifiers.DollyZoomModifier;
 import mchorse.aperture.camera.modifiers.DragModifier;
 import mchorse.aperture.camera.modifiers.FollowModifier;
 import mchorse.aperture.camera.modifiers.LookModifier;
@@ -23,6 +24,7 @@ import mchorse.aperture.capabilities.camera.Camera;
 import mchorse.aperture.capabilities.camera.CameraStorage;
 import mchorse.aperture.capabilities.camera.ICamera;
 import mchorse.aperture.network.Dispatcher;
+import mchorse.mclib.config.ConfigBuilder;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.capabilities.CapabilityManager;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
@@ -65,6 +67,7 @@ public class CommonProxy
         ModifierRegistry.register("orbit", OrbitModifier.class);
         ModifierRegistry.register("math", MathModifier.class);
         ModifierRegistry.register("remapper", RemapperModifier.class);
+        ModifierRegistry.register("dolly_zoom", DollyZoomModifier.class);
     }
 
     /**
@@ -82,5 +85,12 @@ public class CommonProxy
     public String getLanguageString(String key, String defaultComment)
     {
         return defaultComment;
+    }
+    
+    /**
+     * Register client only configuration
+     */
+    public void registerClientConfig(ConfigBuilder builder)
+    {
     }
 }

@@ -46,15 +46,23 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.GameType;
 import net.minecraftforge.client.GuiIngameForge;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.TickEvent.ClientTickEvent;
+import net.minecraftforge.fml.common.gameevent.TickEvent.Phase;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import org.lwjgl.input.Keyboard;
 
+import com.google.common.collect.Queues;
+
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.function.Supplier;
 
 /**
@@ -187,6 +195,8 @@ public class GuiCameraEditor extends GuiBase
     public GuiModifiersManager modifiers;
     public GuiMinemaPanel minema;
     public GuiDelegateElement<GuiAbstractFixturePanel> panel;
+
+    public Queue<Runnable> operations = Queues.<Runnable>newArrayDeque();
 
     /**
      * Initialize the camera editor with a camera profile.
@@ -597,7 +607,7 @@ public class GuiCameraEditor extends GuiBase
     {
         if (this.runner.isRunning())
         {
-            this.runner.ticks = value;
+            this.postOperation(() -> this.runner.setTick(value));
         }
 
         if (fromScrub)
@@ -649,7 +659,7 @@ public class GuiCameraEditor extends GuiBase
                 {
                     int offset = (int) panel.currentOffset();
 
-                    this.timeline.setValueFromScrub(offset);
+                    this.timeline.setValueFromScrub((int) (offset + duration));
                 }
 
                 this.timeline.index = this.getProfile().fixtures.indexOf(fixture);
@@ -943,13 +953,16 @@ public class GuiCameraEditor extends GuiBase
             this.modifiers.cameraEditorOpened();
         }
 
-        Minecraft.getMinecraft().gameSettings.hideGUI = true;
+        Minecraft mc = Minecraft.getMinecraft();
+        mc.gameSettings.hideGUI = true;
         GuiIngameForge.renderHotbar = false;
         GuiIngameForge.renderCrosshairs = false;
 
         this.flight.setFlightEnabled(false);
         ClientProxy.control.cache();
         this.setAspectRatio(Aperture.editorLetterboxAspect.get());
+        mc.gameSettings.thirdPersonView = 0;
+        mc.setRenderViewEntity(player);
 
         if (Aperture.spectator.get() && !Aperture.outside.get())
         {
@@ -960,6 +973,15 @@ public class GuiCameraEditor extends GuiBase
         }
 
         this.runner.attachOutside();
+
+        ClientProxy.curveManager.refreshCurves();
+
+        if (this.profiles.curves.isVisible())
+        {
+            this.profiles.curves.update();
+        }
+
+        MinecraftForge.EVENT_BUS.register(this);
     }
 
     public CameraRunner getRunner()
@@ -1036,7 +1058,6 @@ public class GuiCameraEditor extends GuiBase
         EntityPlayer player = Minecraft.getMinecraft().player;
 
         this.position.set(player);
-        this.getProfile().applyCurves(tick, ticks);
         this.getProfile().applyProfile(tick, ticks, this.lastPartialTick, this.position);
 
         this.position.apply(this.getCamera());
@@ -1256,19 +1277,39 @@ public class GuiCameraEditor extends GuiBase
 
     public void togglePlayback()
     {
+        boolean playing = !this.playing;
+
         this.setFlight(false);
-        this.runner.toggle(this.getProfile(), this.timeline.value, () -> Math.max(this.getProfile().getDuration(), this.maxScrub));
-        this.updatePlauseButton();
-
-        this.playing = this.runner.isRunning();
-
-        if (!this.playing)
+        this.postOperation(() -> 
         {
-            this.runner.attachOutside();
-            this.updatePlayerCurrently();
-        }
+            if (playing)
+            {
+                this.runner.start(this.getProfile(), this.timeline.value, () -> Math.max(this.getProfile().getDuration(), this.maxScrub));
+            }
+            else
+            {
+                int tick = (int) this.runner.ticks;
 
-        this.postPlayback(this.timeline.value);
+                if (!this.runner.skipUpdate)
+                {
+                    tick++;
+                }
+
+                this.runner.stop();
+                this.timeline.setValue(tick);
+            }
+
+            this.playing = this.runner.isRunning();
+            this.updatePlauseButton();
+
+            if (!this.playing)
+            {
+                this.runner.attachOutside();
+                this.updatePlayerCurrently();
+            }
+        });
+
+        this.postPlayback(this.timeline.value, playing);
     }
 
     @Override
@@ -1291,18 +1332,41 @@ public class GuiCameraEditor extends GuiBase
     @Override
     protected void closeScreen()
     {
+        this.minema.stop();
         Minecraft.getMinecraft().gameSettings.hideGUI = false;
-        ClientProxy.control.restore();
         GuiIngameForge.renderHotbar = true;
         GuiIngameForge.renderCrosshairs = true;
-        this.minema.stop();
 
         if (!this.runner.isRunning())
         {
             this.runner.detachOutside();
         }
 
+        ClientProxy.curveManager.resetAll();
+
+        MinecraftForge.EVENT_BUS.unregister(this);
+
+        while (!operations.isEmpty())
+        {
+            operations.poll().run();
+        }
+
+        ClientProxy.control.restore();
+
         super.closeScreen();
+    }
+
+    @Override
+    protected void keyTyped(char typedChar, int keyCode) throws IOException
+    {
+        if (keyCode == 1 && this.minema.isRecording() && this.runner.isRunning())
+        {
+            this.minema.stop();
+        }
+        else
+        {
+            super.keyTyped(typedChar, keyCode);
+        }
     }
 
     /* Rendering code */
@@ -1316,6 +1380,7 @@ public class GuiCameraEditor extends GuiBase
         /* What the fuck, why is partial tick is always 0.32 on 1.12.2? */
         partialTicks = Minecraft.getMinecraft().getRenderPartialTicks();
 
+        this.lastPartialTick = 0;
         if (this.runner.isRunning())
         {
             this.lastPartialTick = partialTicks;
@@ -1432,7 +1497,10 @@ public class GuiCameraEditor extends GuiBase
         /* Update playback timeline */
         if (this.runner.isRunning())
         {
-            this.timeline.setValue((int) this.runner.ticks);
+            this.setFlight(false);
+            this.timeline.value = (int) this.runner.ticks;
+            this.timeline.setValue(this.timeline.value);
+            this.timeline.scale.shiftInto(this.timeline.value);
         }
 
         /* Rewind playback back to 0 */
@@ -1444,6 +1512,12 @@ public class GuiCameraEditor extends GuiBase
 
             this.postRewind(this.timeline.value);
             this.playing = false;
+        }
+
+        /* Always apply curves */
+        if (!this.runner.isRunning())
+        {
+            this.getProfile().applyCurves(this.timeline.value, this.lastPartialTick);
         }
 
         /* Sync the player on current tick */
@@ -1629,6 +1703,23 @@ public class GuiCameraEditor extends GuiBase
             GlStateManager.tryBlendFuncSeparate(GlStateManager.SourceFactor.ONE_MINUS_DST_COLOR, GlStateManager.DestFactor.ONE_MINUS_SRC_COLOR, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
             GlStateManager.color(1, 1, 1, 1);
             this.drawTexturedModalRect(this.viewport.mx() - 7, this.viewport.my() - 7, 0, 0, 16, 16);
+        }
+    }
+
+    public void postOperation(Runnable operation)
+    {
+        this.operations.add(operation);
+    }
+
+    @SubscribeEvent
+    public void onClientEvent(ClientTickEvent event)
+    {
+        if (event.phase == Phase.START)
+        {
+            while (!operations.isEmpty())
+            {
+                operations.poll().run();
+            }
         }
     }
 }

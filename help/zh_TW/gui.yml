@@ -123,6 +123,8 @@ aperture.gui:
         drag_description: 使用當前值與先前值之間的線性交錯，將已啟用的相機屬性進行平滑處理
         remapper: 重映射
         remapper_description: 基於給定的表達式或關鍵幀重新映射關鍵點的路徑
+        dolly_zoom: 滑動變焦
+        dolly_zoom_description: 基於指定起始焦點，自動根據FOV調整相機位置
 
         enabled: 啟用
 
@@ -157,12 +159,41 @@ aperture.gui:
 
             keyframes: 啟用關鍵幀
 
+            focus: 焦點
+
         envelopes:
             start_x: 起始點
             start_d: 緩入點
             end_x: 結束點（如果啟用了“相對值”，那麽此處為持續時間的終點，否則從起點開始計算）
             end_d: 緩出點
             interp: 選擇包絡的插值
+
+    curves:
+        sky_r: 天空顏色 R
+        sky_g: 天空顏色 G
+        sky_b: 天空顏色 B
+
+        cloud_r: 雲顏色 R
+        cloud_g: 雲顏色 G
+        cloud_b: 雲顏色 B
+
+        fog_r: 霧顏色 R
+        fog_g: 霧顏色 G
+        fog_b: 霧顏色 B
+        fog_start: 霧起始點
+        fog_end: 霧消失點
+        fog_density: 霧濃度 （水下）
+
+        celestial_angle: 日月角度 （經度）
+
+        shader:
+            sun_path_rotation: 日月偏角 （緯度）
+            center_depth_smooth: 相機焦點
+            rain_strength: 降雨程度
+            wetness: 潮濕度
+            frame_time_counter: 幀時間動畫
+            world_time: 世界時間動畫
+            is_eye_in_water: 水下模式
 
     profiles:
         title: 配置

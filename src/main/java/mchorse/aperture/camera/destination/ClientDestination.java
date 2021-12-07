@@ -4,12 +4,13 @@ import mchorse.aperture.Aperture;
 import mchorse.aperture.ClientProxy;
 import mchorse.aperture.camera.CameraProfile;
 import mchorse.aperture.camera.CameraUtils;
+import mchorse.mclib.utils.resources.RLUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.ResourceLocation;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Client destination
@@ -46,7 +47,7 @@ public class ClientDestination extends AbstractDestination
     {
         try
         {
-            FileUtils.write(new File(ClientProxy.getClientCameras(), this.filename + ".json"), CameraUtils.toJSON(profile), Charset.defaultCharset());
+            FileUtils.write(new File(ClientProxy.getClientCameras(), this.filename + ".json"), CameraUtils.toJSON(profile), StandardCharsets.UTF_8);
 
             Aperture.l10n.success(Minecraft.getMinecraft().player, "profile.client_save", this.filename);
         }
@@ -61,7 +62,7 @@ public class ClientDestination extends AbstractDestination
     {
         try
         {
-            String json = FileUtils.readFileToString(new File(ClientProxy.getClientCameras(), this.filename + ".json"), Charset.defaultCharset());
+            String json = FileUtils.readFileToString(new File(ClientProxy.getClientCameras(), this.filename + ".json"), StandardCharsets.UTF_8);
             CameraProfile newProfile = CameraUtils.readProfileFromJSON(json);
 
             newProfile.setDestination(this);
@@ -86,6 +87,6 @@ public class ClientDestination extends AbstractDestination
     @Override
     public ResourceLocation toResourceLocation()
     {
-        return new ResourceLocation("client", this.filename);
+        return RLUtils.create("client", this.filename);
     }
 }

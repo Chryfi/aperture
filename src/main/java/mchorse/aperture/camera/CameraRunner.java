@@ -62,6 +62,9 @@ public class CameraRunner
     public float pitch = 0.0F;
     public Supplier<Long> duration;
 
+    /* Skip first tick update after scrub */
+    public boolean skipUpdate = false;
+
     /* Profile access methods */
 
     public boolean isRunning()
@@ -143,6 +146,7 @@ public class CameraRunner
         this.isRunning = true;
         this.ticks = start;
         this.duration = duration;
+        this.skipUpdate = true;
     }
 
     /**
@@ -161,6 +165,7 @@ public class CameraRunner
         this.isRunning = false;
         this.profile = null;
         this.duration = null;
+        this.skipUpdate = false;
 
         ClientProxy.control.resetRoll();
     }
@@ -185,6 +190,12 @@ public class CameraRunner
         {
             this.outside.stop();
         }
+    }
+
+    public void setTick(long ticks)
+    {
+        this.ticks = ticks;
+        this.skipUpdate = this.isRunning ? true : false;
     }
 
     /**
@@ -311,8 +322,8 @@ public class CameraRunner
     {
         EntityLivingBase camera = this.outside.active ? this.outside.camera : player;
 
-        camera.setLocationAndAngles(x, y, z, angle.yaw % 360, angle.pitch);
-        camera.setPositionAndRotation(x, y, z, angle.yaw % 360, angle.pitch);
+        camera.setLocationAndAngles(x, Math.max(y - camera.getEyeHeight(), -64.0), z, angle.yaw % 360, angle.pitch);
+        camera.setPositionAndRotation(x, Math.max(y - camera.getEyeHeight(), -64.0), z, angle.yaw % 360, angle.pitch);
         camera.rotationYawHead = camera.prevRotationYawHead = angle.yaw;
     }
 
@@ -329,7 +340,14 @@ public class CameraRunner
                 Aperture.LOGGER.info("Camera frame: " + this.ticks);
             }
 
-            this.ticks++;
+            if (this.skipUpdate)
+            {
+                this.skipUpdate = false;
+            }
+            else
+            {
+                this.ticks++;
+            }
         }
     }
 }
